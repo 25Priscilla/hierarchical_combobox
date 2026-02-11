@@ -20,9 +20,9 @@ export function Combobox() {
 
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // ----------------------------------
+  // ----------------------------
   // Load root nodes
-  // ----------------------------------
+  // ----------------------------
   useEffect(() => {
     let mounted = true
 
@@ -38,11 +38,9 @@ export function Combobox() {
     }
   }, [loadChildren])
 
-  const rootNodes = nodes["root"] ?? []
-
-  // ----------------------------------
+  // ----------------------------
   // Helpers
-  // ----------------------------------
+  // ----------------------------
   function getParentId(childId: string): string | null {
     for (const parentId in nodes) {
       if (nodes[parentId].some(n => n.id === childId)) {
@@ -52,9 +50,13 @@ export function Combobox() {
     return null
   }
 
-  // ----------------------------------
-  // Search visibility (ancestry preserved)
-  // ----------------------------------
+  function getNodeById(id: string) {
+    return Object.values(nodes).flat().find(n => n.id === id)
+  }
+
+  // ----------------------------
+  // Search visibility
+  // ----------------------------
   const lowerQuery = query.toLowerCase()
   const isSearching = query.length > 0
 
@@ -81,10 +83,10 @@ export function Combobox() {
 
   const searchVisibleIds = getSearchVisibleIds()
 
-  // ----------------------------------
-  // Visible nodes (expanded + search)
-  // ----------------------------------
-  function getVisibleNodes(parentId: string = "root"): string[] {
+  // ----------------------------
+  // Flatten visible tree
+  // ----------------------------
+  function getVisibleNodes(parentId = "root"): string[] {
     const children = nodes[parentId] ?? []
 
     return children.flatMap(node => {
@@ -107,9 +109,9 @@ export function Combobox() {
 
   const visibleIds = getVisibleNodes()
 
-  // ----------------------------------
+  // ----------------------------
   // Keyboard navigation
-  // ----------------------------------
+  // ----------------------------
   function onTreeKeyDown(e: KeyboardEvent<HTMLDivElement>) {
     if (!focusedId) return
 
@@ -117,49 +119,42 @@ export function Combobox() {
     if (index === -1) return
 
     switch (e.key) {
-      case "ArrowDown": {
+      case "ArrowDown":
         e.preventDefault()
-        const next = visibleIds[index + 1]
-        if (next) setFocusedId(next)
+        setFocusedId(visibleIds[index + 1] ?? focusedId)
         break
-      }
 
-      case "ArrowUp": {
+      case "ArrowUp":
         e.preventDefault()
-        const prev = visibleIds[index - 1]
-        if (prev) setFocusedId(prev)
+        setFocusedId(visibleIds[index - 1] ?? focusedId)
         break
-      }
 
-      case "ArrowRight": {
+      case "ArrowRight":
         e.preventDefault()
         if (!expanded.has(focusedId)) {
           toggleExpand(focusedId)
           loadChildren(focusedId)
         }
         break
-      }
 
-      case "ArrowLeft": {
+      case "ArrowLeft":
         e.preventDefault()
         if (expanded.has(focusedId)) {
           toggleExpand(focusedId)
         }
         break
-      }
 
       case "Enter":
-      case " ": {
+      case " ":
         e.preventDefault()
         toggleSelect(focusedId)
         break
-      }
     }
   }
 
-  // ----------------------------------
+  // ----------------------------
   // Selected tags
-  // ----------------------------------
+  // ----------------------------
   const selectedIds = Object.entries(selection)
     .filter(([, state]) => state === "checked")
     .map(([id]) => id)
@@ -178,7 +173,7 @@ export function Combobox() {
         ))}
       </div>
 
-      {/* Combobox input (search) */}
+      {/* Input */}
       <input
         ref={inputRef}
         role="combobox"
@@ -216,21 +211,26 @@ export function Combobox() {
           )}
 
           {!loading &&
-            rootNodes.map(node => (
-              <TreeNode
-                key={node.id}
-                node={node}
-                expanded={expanded.has(node.id)}
-                selection={selection[node.id] ?? "unchecked"}
-                isFocused={focusedId === node.id}
-                onFocus={() => setFocusedId(node.id)}
-                onExpand={() => {
-                  toggleExpand(node.id)
-                  loadChildren(node.id)
-                }}
-                onSelect={() => toggleSelect(node.id)}
-              />
-            ))}
+            visibleIds.map(id => {
+              const node = getNodeById(id)
+              if (!node) return null
+
+              return (
+                <TreeNode
+                  key={node.id}
+                  node={node}
+                  expanded={expanded.has(node.id)}
+                  selection={selection[node.id] ?? "unchecked"}
+                  isFocused={focusedId === node.id}
+                  onFocus={() => setFocusedId(node.id)}
+                  onExpand={() => {
+                    toggleExpand(node.id)
+                    loadChildren(node.id)
+                  }}
+                  onSelect={() => toggleSelect(node.id)}
+                />
+              )
+            })}
         </div>
       )}
     </div>
